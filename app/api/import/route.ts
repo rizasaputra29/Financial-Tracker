@@ -4,14 +4,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserIdFromRequest } from '@/lib/auth';
 
-// Non-streaming body parsing configuration (Default for Next.js)
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '4mb', // Sesuaikan dengan ukuran file backup maksimum
-        },
-    },
-};
+// PENTING: Menghapus export const config yang deprecated.
+// Menggunakan dynamic = 'force-dynamic' adalah cara modern untuk memastikan route dieksekusi secara dinamis (non-cached).
+export const dynamic = 'force-dynamic'; 
 
 // POST: Import user data
 export async function POST(request: Request) {
@@ -22,6 +17,8 @@ export async function POST(request: Request) {
   }
 
   try {
+    // request.json() akan berfungsi di sini dan akan mencoba membaca seluruh body.
+    // Jika file sangat besar (>4MB), Anda mungkin perlu menambah limit di next.config.js
     const backupData: any = await request.json();
 
     if (!backupData || backupData.user_id !== userId) {
@@ -45,7 +42,8 @@ export async function POST(request: Request) {
     if (backupData.transactions?.length) {
       const txnsToCreate = backupData.transactions.map((t: any) => ({
         ...t,
-        userId: userId, // Pastikan ID pengguna yang diimpor adalah ID pengguna saat ini
+        userId: userId, 
+        // Pastikan konversi Float
         amount: parseFloat(t.amount || t.amount.toString()),
         date: new Date(t.date),
         createdAt: new Date(t.createdAt),

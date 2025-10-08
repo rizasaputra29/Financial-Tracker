@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserIdFromRequest } from '@/lib/auth';
 
+// Pastikan route ini dinamis karena membaca data real-time
+export const dynamic = 'force-dynamic'; 
+
 // GET: Export all user data
 export async function GET(request: Request) {
   const userId = getUserIdFromRequest(request); 
