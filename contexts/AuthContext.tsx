@@ -1,99 +1,124 @@
+// rizasaputra29/financial-tracker/Financial-Tracker-15996308ee6cfd5d3abc50bd8eb71447eefc8019/contexts/AuthContext.tsx
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  avatarUrl?: string;
-}
+import { getClientUserSession, persistUserSession, clearUserSession, ClientUser } from '@/lib/auth'; 
 
 interface AuthContextType {
-  user: User | null;
+  user: ClientUser | null; 
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, fullName: string) => Promise<boolean>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
-  isLoading: boolean;
+  updateProfile: (data: Partial<ClientUser>) => Promise<boolean>; 
+  forgotPassword: (email: string) => Promise<boolean>;
+  isLoading: boolean; // Disediakan untuk sinkronisasi di FinanceContext
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ClientUser | null>(null); 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
+    const storedUser = getClientUserSession();
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
     }
-    setIsLoading(false);
+    setIsLoading(false); // Sesi selesai dimuat, baik ada user maupun tidak.
   }, []);
 
   const register = async (email: string, password: string, fullName: string): Promise<boolean> => {
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
+      });
 
-      if (users.find((u: any) => u.email === email)) {
-        return false;
+      if (response.ok) {
+        const newUser: ClientUser = await response.json(); 
+        persistUserSession(newUser);
+        setUser(newUser);
+        return true;
       }
-
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        fullName,
-      };
-
-      users.push({ ...newUser, password });
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('currentUser', JSON.stringify(newUser));
-      setUser(newUser);
-      return true;
+      return false; 
     } catch (error) {
+      console.error('Registration error:', error);
       return false;
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const foundUser = users.find((u: any) => u.email === email && u.password === password);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (foundUser) {
-        const { password: _, ...userWithoutPassword } = foundUser;
-        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-        setUser(userWithoutPassword);
+      if (response.ok) {
+        const loggedInUser: ClientUser = await response.json();
+        persistUserSession(loggedInUser);
+        setUser(loggedInUser);
         return true;
       }
-      return false;
+      return false; 
     } catch (error) {
+      console.error('Login error:', error);
       return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('currentUser');
+    clearUserSession();
     setUser(null);
   };
 
-  const updateProfile = (data: Partial<User>) => {
-    if (!user) return;
+  const updateProfile = async (data: Partial<ClientUser>): Promise<boolean> => {
+    if (!user) return false;
 
-    const updatedUser = { ...user, ...data };
-    setUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    try {
+        // Menggunakan user.id yang dijamin ada
+        const response = await fetch('/api/auth/profile', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-User-Id': user.id, // Eksplisit menggunakan user.id
+            },
+            body: JSON.stringify(data),
+        });
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map((u: any) =>
-      u.id === user.id ? { ...u, ...data } : u
-    );
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
+        if (response.ok) {
+            const updatedUser: ClientUser = await response.json();
+            persistUserSession(updatedUser);
+            setUser(updatedUser);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Profile update error:', error);
+        return false;
+    }
   };
 
+  const forgotPassword = async (email: string): Promise<boolean> => {
+    try {
+        const response = await fetch('/api/auth/profile', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        
+        return response.ok;
+    } catch (error) {
+        console.error('Forgot Password error:', error);
+        return false;
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, forgotPassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

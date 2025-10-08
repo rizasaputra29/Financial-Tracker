@@ -1,3 +1,4 @@
+// rizasaputra29/financial-tracker/Financial-Tracker-15996308ee6cfd5d3abc50bd8eb71447eefc8019/app/savings/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -9,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SimpleProgress } from '@/components/SimpleProgress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Target, Check, DollarSign } from 'lucide-react';
+import { formatRupiah, cleanRupiah } from '@/lib/utils'; 
 
 export default function SavingsPage() {
   const { savingsGoals, addSavingsGoal, updateSavingsGoal, deleteSavingsGoal } = useFinance();
@@ -19,16 +21,26 @@ export default function SavingsPage() {
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addAmountGoalId, setAddAmountGoalId] = useState<string | null>(null);
-  const [addAmountValue, setAddAmountValue] = useState('');
+  const [addAmountValue, setAddAmountValue] = useState(''); // String murni
 
   const [goalForm, setGoalForm] = useState({
     name: '',
-    targetAmount: '',
-    currentAmount: '',
+    targetAmount: '', 
+    currentAmount: '', 
     deadline: '',
   });
 
-  const handleAddGoal = () => {
+  const handleGoalAmountChange = (key: 'targetAmount' | 'currentAmount', e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleanedValue = cleanRupiah(e.target.value);
+    setGoalForm({ ...goalForm, [key]: cleanedValue });
+  };
+  
+  const handleAddAmountValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleanedValue = cleanRupiah(e.target.value);
+    setAddAmountValue(cleanedValue);
+  };
+
+  const handleAddGoal = async () => {
     if (!goalForm.name || !goalForm.targetAmount) {
       toast({
         title: 'Error',
@@ -38,71 +50,115 @@ export default function SavingsPage() {
       return;
     }
 
-    addSavingsGoal({
-      name: goalForm.name,
-      targetAmount: parseFloat(goalForm.targetAmount),
-      currentAmount: parseFloat(goalForm.currentAmount || '0'),
-      deadline: goalForm.deadline || undefined,
-      isCompleted: false,
-    });
+    try {
+        await addSavingsGoal({
+            name: goalForm.name,
+            targetAmount: parseFloat(goalForm.targetAmount),
+            currentAmount: parseFloat(goalForm.currentAmount || '0'),
+            deadline: goalForm.deadline || undefined,
+            isCompleted: false,
+        });
 
-    toast({
-      title: 'Success',
-      description: 'Savings goal created successfully',
-    });
+        toast({
+            title: 'Success',
+            description: 'Savings goal created successfully',
+        });
 
-    setGoalForm({
-      name: '',
-      targetAmount: '',
-      currentAmount: '',
-      deadline: '',
-    });
-    setIsAddOpen(false);
+        setGoalForm({
+            name: '',
+            targetAmount: '',
+            currentAmount: '',
+            deadline: '',
+        });
+        setIsAddOpen(false);
+    } catch (e) {
+        toast({
+            title: 'Error',
+            description: 'Failed to create savings goal. Please check server connection.',
+            variant: 'destructive',
+        });
+    }
   };
 
-  const handleAddAmount = (goalId: string) => {
-    if (!addAmountValue) return;
+  const handleAddAmount = async (goalId: string) => {
+    // FIX: Validasi harus menggunakan nilai bersih
+    const cleanedAmount = cleanRupiah(addAmountValue);
+    if (!cleanedAmount || parseFloat(cleanedAmount) <= 0) return;
 
     const goal = savingsGoals.find((g) => g.id === goalId);
     if (!goal) return;
 
-    const newAmount = goal.currentAmount + parseFloat(addAmountValue);
+    const addedAmount = parseFloat(cleanedAmount);
+    const newAmount = goal.currentAmount + addedAmount;
     const isCompleted = newAmount >= goal.targetAmount;
 
-    updateSavingsGoal(goalId, {
-      currentAmount: newAmount,
-      isCompleted,
-    });
+    try {
+        // Panggil updateSavingsGoal dengan nilai numerik yang terhitung
+        await updateSavingsGoal(goalId, {
+            currentAmount: newAmount,
+            isCompleted,
+        });
 
-    toast({
-      title: 'Success',
-      description: isCompleted
-        ? 'Congratulations! Goal completed!'
-        : 'Amount added to savings goal',
-    });
+        toast({
+            title: 'Success',
+            description: isCompleted
+                ? 'Congratulations! Goal completed!'
+                : 'Amount added to savings goal',
+        });
 
-    setAddAmountValue('');
-    setAddAmountGoalId(null);
+        setAddAmountValue('');
+        setAddAmountGoalId(null);
+    } catch (e) {
+        toast({
+            title: 'Error',
+            description: 'Failed to add amount. Please check server connection.',
+            variant: 'destructive',
+        });
+    }
   };
 
-  const handleDeleteGoal = (goalId: string) => {
-    deleteSavingsGoal(goalId);
-    toast({
-      title: 'Success',
-      description: 'Savings goal deleted',
-    });
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+        await deleteSavingsGoal(goalId);
+        toast({
+            title: 'Success',
+            description: 'Savings goal deleted',
+        });
+    } catch (e) {
+        toast({
+            title: 'Error',
+            description: 'Failed to delete goal. Please check server connection.',
+            variant: 'destructive',
+        });
+    }
   };
 
-  const handleMarkComplete = (goalId: string) => {
-    updateSavingsGoal(goalId, { isCompleted: true });
-    toast({
-      title: 'Success',
-      description: 'Goal marked as completed',
-    });
+  const handleMarkComplete = async (goalId: string) => {
+    try {
+        await updateSavingsGoal(goalId, { isCompleted: true });
+        toast({
+            title: 'Success',
+            description: 'Goal marked as completed',
+        });
+    } catch (e) {
+        toast({
+            title: 'Error',
+            description: 'Failed to mark goal complete. Please check server connection.',
+            variant: 'destructive',
+        });
+    }
   };
 
   const activeGoals = savingsGoals.filter((g) => !g.isCompleted);
   const completedGoals = savingsGoals.filter((g) => g.isCompleted);
+
+  const getFormattedGoalValue = (key: 'targetAmount' | 'currentAmount') => {
+    return formatRupiah(parseFloat(goalForm[key] || '0')).replace('Rp', '').trim();
+  };
+  const getFormattedAddAmountValue = () => {
+    return formatRupiah(parseFloat(addAmountValue || '0')).replace('Rp', '').trim();
+  };
+
 
   return (
     <ProtectedRoute>
@@ -124,6 +180,9 @@ export default function SavingsPage() {
               <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Create Savings Goal</DialogTitle>
+                  <DialogDescription>
+                      Define your target amount and optional deadline for your goal.
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 mt-4">
                   <div className="space-y-2">
@@ -137,25 +196,29 @@ export default function SavingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Target Amount</Label>
-                    <Input
-                      type="number"
-                      placeholder="10000000"
-                      value={goalForm.targetAmount}
-                      onChange={(e) => setGoalForm({ ...goalForm, targetAmount: e.target.value })}
-                      className="border-2 border-black"
-                    />
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                        <Input
+                          type="text" 
+                          placeholder="10.000.000"
+                          value={getFormattedGoalValue('targetAmount')}
+                          onChange={(e) => handleGoalAmountChange('targetAmount', e)}
+                          className="border-2 border-black pl-8 text-right"
+                        />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Starting Amount (Optional)</Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={goalForm.currentAmount}
-                      onChange={(e) =>
-                        setGoalForm({ ...goalForm, currentAmount: e.target.value })
-                      }
-                      className="border-2 border-black"
-                    />
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                        <Input
+                          type="text" 
+                          placeholder="0"
+                          value={getFormattedGoalValue('currentAmount')}
+                          onChange={(e) => handleGoalAmountChange('currentAmount', e)}
+                          className="border-2 border-black pl-8 text-right"
+                        />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Deadline (Optional)</Label>
@@ -241,13 +304,13 @@ export default function SavingsPage() {
                           <div>
                             <p className="text-gray-600">Current</p>
                             <p className="font-bold text-lg">
-                              Rp {goal.currentAmount.toLocaleString('id-ID')}
+                              {formatRupiah(goal.currentAmount)}
                             </p>
                           </div>
                           <div className="text-right">
                             <p className="text-gray-600">Target</p>
                             <p className="font-bold text-lg">
-                              Rp {goal.targetAmount.toLocaleString('id-ID')}
+                              {formatRupiah(goal.targetAmount)}
                             </p>
                           </div>
                         </div>
@@ -255,13 +318,16 @@ export default function SavingsPage() {
                         <div className="pt-4 border-t-2 border-black">
                           {addAmountGoalId === goal.id ? (
                             <div className="flex gap-2">
-                              <Input
-                                type="number"
-                                placeholder="Amount to add"
-                                value={addAmountValue}
-                                onChange={(e) => setAddAmountValue(e.target.value)}
-                                className="border-2 border-black"
-                              />
+                              <div className="relative flex-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                                <Input
+                                  type="text" 
+                                  placeholder="Amount to add"
+                                  value={getFormattedAddAmountValue()}
+                                  onChange={handleAddAmountValueChange}
+                                  className="border-2 border-black pl-8 text-right"
+                                />
+                              </div>
                               <Button
                                 onClick={() => handleAddAmount(goal.id)}
                                 className="bg-black text-white hover:bg-gray-800 border-2 border-black"
@@ -335,7 +401,7 @@ export default function SavingsPage() {
                         <div className="text-center py-4">
                           <p className="text-gray-600 mb-2">Goal Achieved</p>
                           <p className="font-bold text-2xl">
-                            Rp {goal.targetAmount.toLocaleString('id-ID')}
+                            {formatRupiah(goal.targetAmount)}
                           </p>
                         </div>
                       </CardContent>

@@ -47,9 +47,11 @@ export default function LoginPage() {
       <Card className="w-full max-w-md border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
+            <Link href="/">
             <div className="p-3 bg-black rounded-lg">
               <Wallet className="w-8 h-8 text-white" />
             </div>
+            </Link>
           </div>
           <CardTitle className="text-3xl font-bold">Financial Tracker</CardTitle>
           <CardDescription className="text-base">

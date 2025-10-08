@@ -1,0 +1,70 @@
+// path: prisma/schema.prisma
+
+datasource db {
+  // Ganti provider ke postgresql
+  provider = "postgresql" 
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String         @id @default(cuid())
+  email       String         @unique
+  password    String         // Simpan HASHED PASSWORD di sini
+  fullName    String
+  avatarUrl   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  transactions Transaction[]
+  budgetLimit  BudgetLimit[]
+  savingsGoals SavingsGoal[]
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // 'income' | 'expense'
+  amount      Float
+  category    String
+  description String?
+  date        DateTime 
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model BudgetLimit {
+  id          String    @id @default(cuid())
+  userId      String    @unique 
+  totalBudget Float
+  dailyLimit  Float
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model SavingsGoal {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  targetAmount  Float
+  currentAmount Float
+  deadline      DateTime?
+  isCompleted   Boolean
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
