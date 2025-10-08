@@ -1,7 +1,8 @@
 // path: lib/auth.ts
 import { User, Prisma } from '@prisma/client'; 
+// Import PrismaClientType agar bisa digunakan untuk casting di API routes
+import type { PrismaClient } from '@prisma/client/edge';
 
-// Dapatkan tipe data User yang TIDAK termasuk password dan data relasi
 export type ClientUser = Omit<User, 'password' | 'createdAt' | 'updatedAt' | 'transactions' | 'budgetLimit' | 'savingsGoals'>;
 
 // MOCK HASHING (GUNAKAN BCRYPT ASLI DI PRODUCTION!)
@@ -14,6 +15,15 @@ export function getUserIdFromRequest(request: Request): string | null {
     const mockUserId = request.headers.get('x-user-id');
     return mockUserId;
 }
+
+// Helper untuk membuat header otentikasi secara langsung
+export const getMockSessionHeader = () => {
+    if (typeof window !== 'undefined') {
+        const userId = sessionStorage.getItem('session_token_mock');
+        return userId ? { 'X-User-Id': userId } : {};
+    }
+    return {};
+};
 
 // --- Frontend Session Management (Client Side) ---
 

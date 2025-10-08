@@ -3,8 +3,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserIdFromRequest } from '@/lib/auth';
+import type { Transaction, BudgetLimit, SavingsGoal } from '@prisma/client'; // Import types
 
-// Pastikan route ini dinamis karena membaca data real-time
 export const dynamic = 'force-dynamic'; 
 
 // GET: Export all user data
@@ -16,19 +16,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Mengambil semua data terkait pengguna dalam satu transaksi database
+    // FIX CALLABILITY: Menggunakan prisma.$transaction yang sederhana
     const [transactions, budgetLimit, savingsGoals] = await prisma.$transaction([
       prisma.transaction.findMany({ where: { userId } }),
       prisma.budgetLimit.findUnique({ where: { userId } }),
       prisma.savingsGoal.findMany({ where: { userId } }),
-    ]);
+    ]) as [Transaction[], BudgetLimit | null, SavingsGoal[]]; // Tipe eksplisit
 
-    // Format data agar mudah dibaca saat diekspor (terutama Date objects)
+    // Format data agar mudah dibaca saat diekspor
     const backupData = {
-      version: 1.0, // Versi struktur data
+      version: 1.0, 
       timestamp: new Date().toISOString(),
       user_id: userId,
-      transactions: transactions.map(t => ({
+      // FIX 'any' TYPE: Menambahkan tipe eksplisit ke map callback
+      transactions: transactions.map((t: Transaction) => ({
         ...t,
         date: t.date.toISOString(),
         createdAt: t.createdAt.toISOString(),
@@ -40,7 +41,8 @@ export async function GET(request: Request) {
           createdAt: budgetLimit.createdAt.toISOString(),
           updatedAt: budgetLimit.updatedAt.toISOString(),
       } : null,
-      savingsGoals: savingsGoals.map(g => ({
+      // FIX 'any' TYPE: Menambahkan tipe eksplisit ke map callback
+      savingsGoals: savingsGoals.map((g: SavingsGoal) => ({
         ...g,
         deadline: g.deadline ? g.deadline.toISOString() : null,
         createdAt: g.createdAt.toISOString(),
@@ -48,7 +50,6 @@ export async function GET(request: Request) {
       })),
     };
 
-    // Mengembalikan data sebagai file JSON yang siap diunduh
     return new NextResponse(JSON.stringify(backupData, null, 2), {
       status: 200,
       headers: {

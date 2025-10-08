@@ -7,6 +7,7 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
+    // FIX CALLABILITY: Menggunakan destructuring yang sederhana
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
@@ -24,7 +25,6 @@ export async function POST(request: Request) {
         avatarUrl: user.avatarUrl 
     };
     
-    // Di sini Anda akan membuat session/JWT dan set cookie di aplikasi nyata
     return NextResponse.json(userWithoutPassword);
   } catch (error) {
     console.error('Login API error:', error);

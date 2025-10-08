@@ -1,8 +1,7 @@
 // path: app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth';
-import { ClientUser } from '@/lib/auth';
+import { hashPassword, ClientUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -12,8 +11,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
+    // FIX CALLABILITY: Menggunakan destructuring yang sederhana
+    const user = await prisma.user.findUnique({ where: { email } }); 
+    if (user) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
 
