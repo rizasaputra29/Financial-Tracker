@@ -6,4 +6,4 @@ set -e
 npx prisma generate
 
 # 2. Jalankan build Next.js standar
-npm run build
+npm run build 
