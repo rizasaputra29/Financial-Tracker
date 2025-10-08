@@ -1,7 +1,5 @@
 // path: lib/prisma.ts
 import { PrismaClient } from '@prisma/client';
-
-const databaseUrl = process.env.DATABASE_URL
    
 const globalForPrisma = global as unknown as { 
   prisma: PrismaClient | undefined 
@@ -10,11 +8,11 @@ const globalForPrisma = global as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' 
+    log: process.env.DATABASE_URL === 'development' 
       ? ['query', 'info', 'warn', 'error'] 
       : ['error'],
   });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.DATABASE_URL !== 'production') {
   globalForPrisma.prisma = prisma;
 }
