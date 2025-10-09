@@ -17,7 +17,6 @@ export function Navigation() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/transactions', label: 'Transactions', icon: TrendingUp },
     { href: '/savings', label: 'Savings', icon: Target },
-    
   ];
 
   const userInitials = user?.fullName
@@ -133,15 +132,6 @@ export function Navigation() {
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
-            </Button>
-            {/* Logout Button: Mobile (icon) */}
-            <Button
-                onClick={logout}
-                variant="outline"
-                size="icon"
-                className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all lg:hidden"
-            >
-                <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
