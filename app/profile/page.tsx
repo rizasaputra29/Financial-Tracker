@@ -268,7 +268,7 @@ export default function ProfilePage() {
                     </div>
                     <Button
                         onClick={handleBackup}
-                        className="bg-green-600 text-white hover:bg-green-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                        className="text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
                     >
                         <Download className="w-4 h-4 mr-2" />
                         Download Backup
@@ -278,14 +278,14 @@ export default function ProfilePage() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="space-y-1">
                         <p className="font-semibold">Import Data (Restore)</p>
-                        <p className="text-sm text-red-600">
+                        <p className="text-sm">
                             Mengimport data akan <strong className="font-bold">MENGHAPUS SEMUA DATA LAMA</strong> secara permanen.
                         </p>
                     </div>
                     <label htmlFor="file-upload" className="cursor-pointer">
                         <Button
                             asChild
-                            className="bg-blue-600 text-white hover:bg-blue-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            className="text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
                             disabled={isImportLoading}
                         >
                             <span className="flex items-center">
