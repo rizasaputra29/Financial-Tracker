@@ -20,7 +20,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, TrendingUp, TrendingDown, Calendar, Edit } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, TrendingDown, Edit } from 'lucide-react';
 import { formatRupiah, cleanRupiah } from '@/lib/utils'; // Import cleanRupiah
 
 const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
@@ -52,23 +52,18 @@ export default function TransactionsPage() {
   const { transactions, addTransaction, updateTransaction, deleteTransaction } = useFinance();
   const { toast } = useToast();
 
-  // FIX 1: Mendeklarasikan state yang hilang
   const [isTxnFormOpen, setIsTxnFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  // isBudgetOpen dan budgetForm dihapus karena sudah dipindahkan ke DashboardPage
   
   const [transactionForm, setTransactionForm] = useState<typeof initialTransactionForm>({
     ...initialTransactionForm,
   });
 
-  // HANDLER BARU: Mengambil nilai bersih dan menyimpannya di state
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanedValue = cleanRupiah(e.target.value);
     setTransactionForm({ ...transactionForm, amount: cleanedValue });
   };
   
-  // handleDailyLimitChange, estimatedDailyLimit, estimatedTotalBudget dihapus
-
   const handleEditTransaction = (transaction: Transaction) => {
     setTransactionForm({
         id: transaction.id,
@@ -78,7 +73,7 @@ export default function TransactionsPage() {
         description: transaction.description || '',
         date: transaction.date.split('T')[0],
     });
-    setIsEditing(true); // FIX: Penggunaan setIsEditing
+    setIsEditing(true); 
     setIsTxnFormOpen(true);
   };
 
@@ -86,7 +81,7 @@ export default function TransactionsPage() {
     setIsTxnFormOpen(open);
     if (!open) {
       setTransactionForm({ ...initialTransactionForm });
-      setIsEditing(false); // FIX: Penggunaan setIsEditing
+      setIsEditing(false); 
     }
   };
 
@@ -100,7 +95,6 @@ export default function TransactionsPage() {
       return;
     }
     
-    // Pastikan amount di-parse ke number sebelum dikirim ke context/API
     const transactionData = {
         type: transactionForm.type,
         amount: parseFloat(transactionForm.amount), 
@@ -110,7 +104,7 @@ export default function TransactionsPage() {
     }
 
     try {
-        if (isEditing && transactionForm.id) { // FIX: Penggunaan isEditing
+        if (isEditing && transactionForm.id) { 
             await updateTransaction(transactionForm.id, transactionData);
 
             toast({
@@ -127,7 +121,7 @@ export default function TransactionsPage() {
         }
         
         setTransactionForm({ ...initialTransactionForm });
-        setIsEditing(false); // FIX: Penggunaan setIsEditing
+        setIsEditing(false); 
         setIsTxnFormOpen(false);
 
     } catch(e) {
@@ -139,7 +133,6 @@ export default function TransactionsPage() {
     }
   };
 
-  // handleSetBudget dihapus
 
   const handleDeleteTransaction = async (id: string) => {
     try {
@@ -172,23 +165,38 @@ export default function TransactionsPage() {
               <p className="text-gray-600">Manage your income and expenses</p>
             </div>
             <div className="flex gap-3">
-              {/* DIALOG SET BUDGET DIHAPUS DARI SINI */}
-
               {/* Add/Edit Transaction Dialog */}
               <Dialog open={isTxnFormOpen} onOpenChange={handleTxnDialogChange}>
                 <DialogTrigger asChild>
-                  <Button className="bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Transaction
+                  {/* START PERBAIKAN BUTTON */}
+                  <Button 
+                    className="
+                      bg-black text-white hover:bg-gray-800 border-2 border-black 
+                      shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
+                      transition-all
+                      
+                      // Default (mobile): icon size (h-10 w-10) dan padding minimal (px-0)
+                      w-10 px-0
+                      // Small/Desktop: full button size (w-auto px-4)
+                      sm:w-auto sm:px-4 
+                    "
+                    size="default" 
+                  >
+                    {/* Icon: Jangan berikan margin di mobile, berikan margin di sm ke atas */}
+                    <Plus className="w-4 h-4 mr-0 sm:mr-2" />
+                    
+                    {/* Text: Sembunyikan di mobile, tampilkan di sm ke atas */}
+                    <span className="hidden sm:inline">Add Transaction</span>
                   </Button>
+                  {/* END PERBAIKAN BUTTON */}
                 </DialogTrigger>
                 <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                   <DialogHeader>
                     <DialogTitle className="text-2xl font-bold">
-                        {isEditing ? 'Edit Transaction' : 'Add Transaction'} {/* FIX: Penggunaan isEditing */}
+                        {isEditing ? 'Edit Transaction' : 'Add Transaction'}
                     </DialogTitle>
                     <DialogDescription>
-                        {isEditing ? 'Modify the details of this transaction.' : 'Record a new income or expense.'} {/* FIX: Penggunaan isEditing */}
+                        {isEditing ? 'Modify the details of this transaction.' : 'Record a new income or expense.'}
                     </DialogDescription>
                   </DialogHeader>
                   <Tabs
@@ -198,10 +206,10 @@ export default function TransactionsPage() {
                     }
                   >
                     <TabsList className="grid w-full grid-cols-2 border-2 border-black">
-                      <TabsTrigger value="expense" className="font-semibold" disabled={isEditing}> {/* FIX: Penggunaan isEditing */}
+                      <TabsTrigger value="expense" className="font-semibold" disabled={isEditing}>
                         Expense
                       </TabsTrigger>
-                      <TabsTrigger value="income" className="font-semibold" disabled={isEditing}> {/* FIX: Penggunaan isEditing */}
+                      <TabsTrigger value="income" className="font-semibold" disabled={isEditing}>
                         Income
                       </TabsTrigger>
                     </TabsList>
@@ -291,9 +299,9 @@ export default function TransactionsPage() {
                   {sortedTransactions.map((transaction) => (
                     <div
                       key={transaction.id}
-                      className="flex items-center justify-between p-4 border-2 border-black hover:bg-gray-50 transition-colors"
+                      className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-2 border-black hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-start gap-4 flex-1 mb-3 md:mb-0">
                         <div
                           className={`p-2 rounded-lg border-2 border-black ${
                             transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
@@ -321,35 +329,40 @@ export default function TransactionsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      
+                      <div className="flex justify-between items-center w-full md:w-auto">
+                        
                         <div
-                          className={`text-xl font-bold ${
+                          className={`text-lg font-bold md:text-xl md:text-right flex-1 ${
                             transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                           }`}
                         >
                           {transaction.type === 'income' ? '+' : '-'}
                           {formatRupiah(transaction.amount)}
                         </div>
-                        {/* Edit Button */}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleEditTransaction(transaction)}
-                          className="border-2 border-black hover:bg-yellow-50"
-                          title="Edit Transaction"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        {/* Delete Button */}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDeleteTransaction(transaction.id)}
-                          className="border-2 border-black hover:bg-red-50"
-                          title="Delete Transaction"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        
+                        <div className="flex items-center gap-2 md:gap-4 ml-4">
+                          {/* Edit Button */}
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEditTransaction(transaction)}
+                            className="border-2 border-black hover:bg-yellow-50 h-8 w-8"
+                            title="Edit Transaction"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          {/* Delete Button */}
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteTransaction(transaction.id)}
+                            className="border-2 border-black hover:bg-red-50 h-8 w-8"
+                            title="Delete Transaction"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -172,10 +172,26 @@ export default function SavingsPage() {
             </div>
             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Goal
+                {/* START PERBAIKAN BUTTON ADD GOAL */}
+                <Button 
+                  className="
+                    bg-black text-white hover:bg-gray-800 border-2 border-black 
+                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
+                    transition-all
+                    // Default (mobile): icon size (w-10 px-0)
+                    w-10 px-0
+                    // Small/Desktop: full button size (w-auto px-4)
+                    sm:w-auto sm:px-4 
+                  "
+                  size="default" 
+                >
+                  {/* Icon: Jangan berikan margin di mobile, berikan margin di sm ke atas */}
+                  <Plus className="w-4 h-4 mr-0 sm:mr-2" />
+                  
+                  {/* Text: Sembunyikan di mobile, tampilkan di sm ke atas */}
+                  <span className="hidden sm:inline">Add Goal</span>
                 </Button>
+                {/* END PERBAIKAN BUTTON ADD GOAL */}
               </DialogTrigger>
               <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 <DialogHeader>
