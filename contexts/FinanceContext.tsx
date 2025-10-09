@@ -1,7 +1,7 @@
 // rizasaputra29/financial-tracker/Financial-Tracker-15996308ee6cfd5d3abc50bd8eb71447eefc8019/contexts/FinanceContext.tsx
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 export interface Transaction {
@@ -49,7 +49,9 @@ interface FinanceContextType {
   deleteSavingsGoal: (id: string) => Promise<void>;
   getDailyExpenses: (date: string) => number;
   getRemainingDailyBudget: (date: string) => number;
-  // FIX: Menambahkan fetchFinanceData ke interface
+  // BARU: Fungsi untuk budget dinamis
+  getPeriodExpenses: (start: string, end: string) => number;
+  getAdjustedRemainingTotalBudget: () => number;
   fetchFinanceData: () => Promise<void>;
   backupData: () => Promise<void>;
   importData: (file: File) => Promise<void>;
@@ -68,6 +70,12 @@ const formatDate = (dateInput: Date | string): string => {
     const date = new Date(dateInput);
     if (isNaN(date.getTime())) return new Date().toISOString().split('T')[0];
     return date.toISOString().split('T')[0];
+};
+
+// Helper: Memeriksa apakah tanggal berada dalam periode budget
+const isDateInPeriod = (date: string, start: string, end: string): boolean => {
+    // Memastikan perbandingan string tanggal (YYYY-MM-DD)
+    return date >= start && date <= end;
 };
 
 // HELPER: Mengubah number menjadi string numerik yang bersih untuk API
@@ -375,7 +383,31 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
 
-  // --- FUNGSI HELPER ---
+  // --- FUNGSI BARU UNTUK BUDGET DINAMIS ---
+  
+  const getPeriodExpenses = useCallback((start: string, end: string): number => {
+    return transactions.reduce((sum, t) => {
+        if (t.type === 'expense' && isDateInPeriod(t.date, start, end)) {
+            return sum + t.amount;
+        }
+        return sum;
+    }, 0);
+  }, [transactions]);
+  
+  // LOGIKA UTAMA: Menghitung sisa budget total berdasarkan pengeluaran aktual
+  const getAdjustedRemainingTotalBudget = useCallback((): number => {
+    if (!budgetLimit || !budgetLimit.isActive) return 0;
+    
+    // Hitung total pengeluaran yang sudah terjadi dalam periode budget
+    const totalExpensesInPeriod = getPeriodExpenses(budgetLimit.startDate, budgetLimit.endDate);
+    
+    // Sisa Budget Total = Total Budget Awal - Total Pengeluaran Aktual dalam Periode
+    const remaining = budgetLimit.totalBudget - totalExpensesInPeriod;
+    
+    return remaining; 
+  }, [budgetLimit, getPeriodExpenses]);
+
+  // --- FUNGSI HELPER LAMA ---
   const getDailyExpenses = (date: string) => {
     return transactions
       .filter((t) => t.type === 'expense' && t.date === date)
@@ -404,7 +436,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         deleteSavingsGoal,
         getDailyExpenses,
         getRemainingDailyBudget,
-        fetchFinanceData, // FIX: Sekarang diekspor
+        // BARU: Export fungsi-fungsi budget dinamis
+        getPeriodExpenses,
+        getAdjustedRemainingTotalBudget, 
+        fetchFinanceData,
         backupData, 
         importData,
       }}

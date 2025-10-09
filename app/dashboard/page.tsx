@@ -8,13 +8,14 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SimpleProgress } from '@/components/SimpleProgress';
-import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { formatRupiah, cleanRupiah } from '@/lib/utils'; // Import formatRupiah and cleanRupiah
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // BARU: Import Alert component
 
 
 // Helper function to calculate days difference (moved from transactions/page.tsx)
@@ -32,7 +33,8 @@ const calculateDaysDifference = (start: string, end: string): number => {
 }
 
 export default function DashboardPage() {
-  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit } =
+  // BARU: Import getAdjustedRemainingTotalBudget
+  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit, getAdjustedRemainingTotalBudget } =
     useFinance();
   const { toast } = useToast();
 
@@ -118,6 +120,12 @@ export default function DashboardPage() {
   const todayExpenses = getDailyExpenses(today);
   const remainingDailyBudget = getRemainingDailyBudget(today);
 
+  // BARU: Hitung sisa budget total yang disesuaikan
+  const adjustedRemainingTotalBudget = getAdjustedRemainingTotalBudget(); 
+  
+  // BARU: Flag untuk menampilkan warning
+  const dailyBudgetExceeded = budgetLimit && budgetLimit.isActive && todayExpenses > budgetLimit.dailyLimit; 
+
   const activeSavingsGoals = savingsGoals.filter((g) => !g.isCompleted);
 
   return (
@@ -131,7 +139,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* ... Kartu Summary lainnya (Balance, Income, Expenses, Goals) ... */}
+            {/* ... Summary Cards ... */}
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-semibold text-gray-600">
@@ -187,6 +195,21 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* NEW: WARNING KETIKA DAILY BUDGET TERLAMPUI */}
+          {dailyBudgetExceeded && budgetLimit && (
+            <Alert 
+              variant="destructive" 
+              className="mb-6 border-2 border-red-600 shadow-[4px_4px_0px_0px_rgba(220,38,38,1)]"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Warning: Daily Budget Exceeded!</AlertTitle>
+              <AlertDescription>
+                  Pengeluaran Anda hari ini ({formatRupiah(todayExpenses)}) telah melebihi batas harian ({formatRupiah(budgetLimit.dailyLimit)}). 
+                  Sisa budget total Anda telah disesuaikan dan akan mempengaruhi sisa budget harian di hari-hari mendatang.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {budgetLimit && budgetLimit.isActive ? (
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
@@ -298,13 +321,26 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <SimpleProgress
-                    value={(todayExpenses / budgetLimit.dailyLimit) * 100}
+                    // Logic progress bar tetap menggunakan daily limit
+                    value={(todayExpenses / budgetLimit.dailyLimit) * 100} 
                     className="h-3 border-2 border-black"
                   />
                 </div>
-                <div className="text-sm text-gray-600">
-                  Total Budget: {formatRupiah(budgetLimit.totalBudget)} ({new Date(budgetLimit.startDate).toLocaleDateString('id-ID')} -{' '}
-                  {new Date(budgetLimit.endDate).toLocaleDateString('id-ID')})
+                {/* BARU: Tampilkan Adjusted Remaining Total Budget */}
+                <div className="text-sm text-gray-600 space-y-1 pt-4 border-t-2 border-dashed border-gray-300">
+                    <p>Original Total Budget: <span className="font-semibold">{formatRupiah(budgetLimit.totalBudget)}</span></p>
+                    <p className="text-lg font-bold">
+                        Adjusted Remaining Total: 
+                        <span 
+                            className={`ml-2 ${adjustedRemainingTotalBudget < 0 ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                            {formatRupiah(adjustedRemainingTotalBudget)}
+                        </span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        Periode Budget: {new Date(budgetLimit.startDate).toLocaleDateString('id-ID')} -{' '}
+                        {new Date(budgetLimit.endDate).toLocaleDateString('id-ID')}
+                    </p>
                 </div>
               </CardContent>
             </Card>
@@ -316,7 +352,6 @@ export default function DashboardPage() {
                 <p className="text-gray-600 mb-4 text-center">
                   Set a daily budget limit to track your spending
                 </p>
-                {/* Tombol yang sama untuk membuat budget saat belum ada */}
                 <Dialog open={isBudgetOpen} onOpenChange={setIsBudgetOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
@@ -324,7 +359,6 @@ export default function DashboardPage() {
                       Set Budget Limit
                     </Button>
                   </DialogTrigger>
-                  {/* ULANGI DIALOG BUDGET DI SINI AGAR BISA DIBUKA DARI SINI */}
                   <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                     <DialogHeader>
                       <DialogTitle className="text-2xl font-bold">Set Budget Limit</DialogTitle>
