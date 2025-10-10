@@ -8,7 +8,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SimpleProgress } from '@/components/SimpleProgress';
-import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar, AlertTriangle, XCircle } from 'lucide-react'; // BARU: Import XCircle
+import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar, AlertTriangle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { formatRupiah, cleanRupiah } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -33,7 +33,7 @@ const calculateDaysDifference = (start: string, end: string): number => {
 }
 
 export default function DashboardPage() {
-  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit, getAdjustedRemainingTotalBudget, resetBudgetLimit } = // BARU: Import resetBudgetLimit
+  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit, getAdjustedRemainingTotalBudget, resetBudgetLimit } =
     useFinance();
   const { toast } = useToast();
 
@@ -235,16 +235,22 @@ export default function DashboardPage() {
           {/* KARTU BUDGET HANYA TAMPIL JIKA isBudgetActiveToday TRUE */}
           {isBudgetActiveToday && budgetLimit ? (
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold">Daily Budget Tracker</CardTitle>
+              {/* PERUBAHAN UTAMA: CardHeader menjadi responsif */}
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <CardTitle className="text-xl font-bold mb-3 sm:mb-0">Daily Budget Tracker</CardTitle>
                 
-                <div className="flex gap-2">
+                {/* CONTAINER TOMBOL: Stack vertikal di mobile, horizontal di sm+ */}
+                <div className="flex flex-col gap-2 sm:flex-row w-full sm:w-auto">
                     {/* TOMBOL BARU: Reset Budget */}
                     <Button
                         variant="destructive"
                         size="sm"
                         onClick={handleResetBudget}
-                        className="bg-red-600 text-white hover:bg-red-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                        className="
+                          bg-red-600 text-white hover:bg-red-700 border-2 border-black 
+                          shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all
+                          w-full sm:w-auto // Full width on mobile
+                        "
                     >
                         <XCircle className="w-4 h-4 mr-2" />
                         Reset Budget
@@ -256,13 +262,18 @@ export default function DashboardPage() {
                         <Button 
                             variant="outline" 
                             size="sm"
-                            className="bg-white text-black hover:bg-gray-100 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                            className="
+                              bg-white text-black hover:bg-gray-100 border-2 border-black 
+                              shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all
+                              w-full sm:w-auto // Full width on mobile
+                            "
                         >
                           <Calendar className="w-4 h-4 mr-2" />
                           Set Budget
                         </Button>
                       </DialogTrigger>
                       
+                      {/* ... Dialog Content (Form) ... */}
                       <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                         <DialogHeader>
                           <DialogTitle className="text-2xl font-bold">Set Budget Limit</DialogTitle>
