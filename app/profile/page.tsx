@@ -330,11 +330,10 @@ export default function ProfilePage() {
                 <div className="pt-4">
                   <p className="font-semibold text-black mb-2">Features:</p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Track income and expenses (Using PostgreSQL/Prisma Backend)</li>
+                    <li>Track income and expenses</li>
                     <li>Set daily budget limits and monitor spending</li>
                     <li>Create multiple savings goals with progress tracking</li>
                     <li>View comprehensive financial dashboard</li>
-                    <li>Works offline as a Progressive Web App</li>
                   </ul>
                 </div>
               </div>

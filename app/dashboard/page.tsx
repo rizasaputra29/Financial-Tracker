@@ -8,17 +8,17 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SimpleProgress } from '@/components/SimpleProgress';
-import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar, AlertTriangle } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Target, Plus, Calendar, AlertTriangle, XCircle } from 'lucide-react'; // BARU: Import XCircle
 import Link from 'next/link';
-import { formatRupiah, cleanRupiah } from '@/lib/utils'; // Import formatRupiah and cleanRupiah
+import { formatRupiah, cleanRupiah } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // BARU: Import Alert component
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
-// Helper function to calculate days difference (moved from transactions/page.tsx)
+// Helper function to calculate days difference
 const calculateDaysDifference = (start: string, end: string): number => {
     const startDate = new Date(start);
     const endDate = new Date(end);
@@ -33,46 +33,44 @@ const calculateDaysDifference = (start: string, end: string): number => {
 }
 
 export default function DashboardPage() {
-  // BARU: Import getAdjustedRemainingTotalBudget
-  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit, getAdjustedRemainingTotalBudget } =
+  const { transactions, budgetLimit, savingsGoals, getDailyExpenses, getRemainingDailyBudget, setBudgetLimit, getAdjustedRemainingTotalBudget, resetBudgetLimit } = // BARU: Import resetBudgetLimit
     useFinance();
   const { toast } = useToast();
 
   const today = new Date().toISOString().split('T')[0];
   
-  // STATE DAN LOGIKA BUDGET BARU (dipindahkan dari transactions/page.tsx)
   const [isBudgetOpen, setIsBudgetOpen] = useState(false);
   const [budgetForm, setBudgetForm] = useState({
-    dailyLimit: budgetLimit?.dailyLimit.toString() || '',
+    totalBudget: budgetLimit?.totalBudget.toString() || '',
     startDate: budgetLimit?.startDate || new Date().toISOString().split('T')[0],
     endDate: budgetLimit?.endDate || '',
     isActive: budgetLimit?.isActive ?? true,
   });
 
-  const handleDailyLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTotalBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanedValue = cleanRupiah(e.target.value);
-    setBudgetForm({ ...budgetForm, dailyLimit: cleanedValue });
+    setBudgetForm({ ...budgetForm, totalBudget: cleanedValue });
   };
 
   const handleSetBudget = async () => {
-    if (!budgetForm.dailyLimit || !budgetForm.endDate || !budgetForm.startDate) {
+    if (!budgetForm.totalBudget || !budgetForm.endDate || !budgetForm.startDate) {
       toast({
         title: 'Error',
-        description: 'Please fill Daily Limit, Start Date, and End Date',
+        description: 'Please fill Total Budget, Start Date, and End Date',
         variant: 'destructive',
       });
       return;
     }
 
     const daysCount = calculateDaysDifference(budgetForm.startDate, budgetForm.endDate);
-    const dailyLimitAmount = parseFloat(budgetForm.dailyLimit); 
+    const totalBudgetAmount = parseFloat(budgetForm.totalBudget); 
     
-    const calculatedTotalBudget = dailyLimitAmount * daysCount;
+    const calculatedDailyLimit = daysCount > 0 ? totalBudgetAmount / daysCount : totalBudgetAmount;
 
     try {
       await setBudgetLimit({
-        totalBudget: calculatedTotalBudget, 
-        dailyLimit: dailyLimitAmount,
+        totalBudget: totalBudgetAmount,
+        dailyLimit: calculatedDailyLimit,
         startDate: budgetForm.startDate,
         endDate: budgetForm.endDate,
         isActive: budgetForm.isActive,
@@ -93,13 +91,32 @@ export default function DashboardPage() {
     }
   };
   
+  // FUNGSI BARU: Handler untuk tombol Reset Budget
+  const handleResetBudget = async () => {
+    if (!budgetLimit) return;
+    
+    try {
+        await resetBudgetLimit();
+        toast({
+            title: 'Budget Reset',
+            description: 'Budget limit has been reset.',
+        });
+    } catch(e) {
+        toast({
+            title: 'Error',
+            description: 'Failed to reset budget. Please check server connection.',
+            variant: 'destructive',
+        });
+    }
+  };
+
   const daysCountEstimate = budgetForm.startDate && budgetForm.endDate 
     ? calculateDaysDifference(budgetForm.startDate, budgetForm.endDate) 
     : 0;
-  const estimatedDailyLimit = parseFloat(budgetForm.dailyLimit || '0');
-  const estimatedTotalBudget = estimatedDailyLimit * daysCountEstimate;
-  // AKHIR LOGIKA BUDGET BARU
-
+    
+  const estimatedTotalBudget = parseFloat(budgetForm.totalBudget || '0');
+  const estimatedDailyLimit = daysCountEstimate > 0 ? estimatedTotalBudget / daysCountEstimate : 0;
+  
   const totalIncome = useMemo(
     () =>
       transactions
@@ -120,11 +137,15 @@ export default function DashboardPage() {
   const todayExpenses = getDailyExpenses(today);
   const remainingDailyBudget = getRemainingDailyBudget(today);
 
-  // BARU: Hitung sisa budget total yang disesuaikan
   const adjustedRemainingTotalBudget = getAdjustedRemainingTotalBudget(); 
   
-  // BARU: Flag untuk menampilkan warning
-  const dailyBudgetExceeded = budgetLimit && budgetLimit.isActive && todayExpenses > budgetLimit.dailyLimit; 
+  // LOGIKA BARU: Cek apakah budget aktif hari ini (berada dalam periode)
+  const isBudgetActiveToday = budgetLimit && 
+                              budgetLimit.isActive && 
+                              today >= budgetLimit.startDate && 
+                              today <= budgetLimit.endDate;
+                              
+  const dailyBudgetExceeded = isBudgetActiveToday && todayExpenses > budgetLimit!.dailyLimit; 
 
   const activeSavingsGoals = savingsGoals.filter((g) => !g.isCompleted);
 
@@ -196,7 +217,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* NEW: WARNING KETIKA DAILY BUDGET TERLAMPUI */}
+          {/* WARNING KETIKA DAILY BUDGET TERLAMPUI */}
           {dailyBudgetExceeded && budgetLimit && (
             <Alert 
               variant="destructive" 
@@ -211,91 +232,105 @@ export default function DashboardPage() {
             </Alert>
           )}
 
-          {budgetLimit && budgetLimit.isActive ? (
+          {/* KARTU BUDGET HANYA TAMPIL JIKA isBudgetActiveToday TRUE */}
+          {isBudgetActiveToday && budgetLimit ? (
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-xl font-bold">Daily Budget Tracker</CardTitle>
                 
-                {/* TOMBOL SET BUDGET DI POJOK KANAN CARD */}
-                <Dialog open={isBudgetOpen} onOpenChange={setIsBudgetOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                        variant="outline" 
+                <div className="flex gap-2">
+                    {/* TOMBOL BARU: Reset Budget */}
+                    <Button
+                        variant="destructive"
                         size="sm"
-                        className="bg-white text-black hover:bg-gray-100 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                        onClick={handleResetBudget}
+                        className="bg-red-600 text-white hover:bg-red-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
                     >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Set Budget
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Reset Budget
                     </Button>
-                  </DialogTrigger>
-                  
-                  {/* DIALOG BUDGET */}
-                  <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                    <DialogHeader>
-                      <DialogTitle className="text-2xl font-bold">Set Budget Limit</DialogTitle>
-                      <DialogDescription>
-                          Set your daily spending limit and the duration for tracking. Total budget will be calculated automatically.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Daily Limit (per hari)</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
-                          <Input
-                            type="text" 
-                            placeholder="150.000"
-                            value={formatRupiah(estimatedDailyLimit).replace('Rp', '').trim()} 
-                            onChange={handleDailyLimitChange}
-                            className="border-2 border-black pl-8 text-right"
-                          />
-                        </div>
-                      </div>
+
+                    {/* TOMBOL EDIT BUDGET */}
+                    <Dialog open={isBudgetOpen} onOpenChange={setIsBudgetOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="bg-white text-black hover:bg-gray-100 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Set Budget
+                        </Button>
+                      </DialogTrigger>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Start Date</Label>
-                          <Input
-                            type="date"
-                            value={budgetForm.startDate}
-                            onChange={(e) =>
-                              setBudgetForm({ ...budgetForm, startDate: e.target.value })
-                            }
-                            className="border-2 border-black"
-                          />
+                      <DialogContent className="border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <DialogHeader>
+                          <DialogTitle className="text-2xl font-bold">Set Budget Limit</DialogTitle>
+                          <DialogDescription>
+                              Set your total budget and the duration. Your daily limit will be calculated automatically.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 mt-4">
+                          <div className="space-y-2">
+                            <Label>Total Budget (untuk seluruh periode)</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                              <Input
+                                type="text" 
+                                placeholder="3.000.000"
+                                value={formatRupiah(estimatedTotalBudget).replace('Rp', '').trim()} 
+                                onChange={handleTotalBudgetChange}
+                                className="border-2 border-black pl-8 text-right"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Start Date</Label>
+                              <Input
+                                type="date"
+                                value={budgetForm.startDate}
+                                onChange={(e) =>
+                                  setBudgetForm({ ...budgetForm, startDate: e.target.value })
+                                }
+                                className="border-2 border-black"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>End Date</Label>
+                              <Input
+                                type="date"
+                                value={budgetForm.endDate}
+                                onChange={(e) =>
+                                  setBudgetForm({ ...budgetForm, endDate: e.target.value })
+                                }
+                                className="border-2 border-black"
+                              />
+                            </div>
+                          </div>
+                          
+                          {daysCountEstimate > 0 && estimatedTotalBudget > 0 && (
+                            <div className="p-3 border-2 border-dashed border-gray-300 rounded-md bg-gray-50 text-sm">
+                              <p className="font-semibold">Estimasi Daily Limit:</p>
+                              <p className="text-lg font-bold text-black">
+                                {formatRupiah(estimatedDailyLimit)} 
+                                <span className="font-normal text-gray-500 text-sm"> / hari ({daysCountEstimate} hari)</span>
+                              </p>
+                            </div>
+                          )}
+                          
+                          <Button
+                            onClick={handleSetBudget}
+                            className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
+                          >
+                            Save Budget
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <Label>End Date</Label>
-                          <Input
-                            type="date"
-                            value={budgetForm.endDate}
-                            onChange={(e) =>
-                              setBudgetForm({ ...budgetForm, endDate: e.target.value })
-                            }
-                            className="border-2 border-black"
-                          />
-                        </div>
-                      </div>
-                      
-                      {daysCountEstimate > 0 && estimatedDailyLimit > 0 && (
-                        <div className="p-3 border-2 border-dashed border-gray-300 rounded-md bg-gray-50 text-sm">
-                          <p className="font-semibold">Estimasi Total Budget:</p>
-                          <p className="text-lg font-bold text-black">
-                            {formatRupiah(estimatedTotalBudget)} 
-                            <span className="font-normal text-gray-500 text-sm"> ({daysCountEstimate} hari)</span>
-                          </p>
-                        </div>
-                      )}
-                      
-                      <Button
-                        onClick={handleSetBudget}
-                        className="w-full bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all"
-                      >
-                        Save Budget
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                      </DialogContent>
+                    </Dialog>
+                </div>
+                
               </CardHeader>
               
               <CardContent className="space-y-4">
@@ -321,12 +356,11 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <SimpleProgress
-                    // Logic progress bar tetap menggunakan daily limit
-                    value={(todayExpenses / budgetLimit.dailyLimit) * 100} 
+                    value={(todayExpenses / budgetLimit.dailyLimit) * 100}
                     className="h-3 border-2 border-black"
                   />
                 </div>
-                {/* BARU: Tampilkan Adjusted Remaining Total Budget */}
+                
                 <div className="text-sm text-gray-600 space-y-1 pt-4 border-t-2 border-dashed border-gray-300">
                     <p>Original Total Budget: <span className="font-semibold">{formatRupiah(budgetLimit.totalBudget)}</span></p>
                     <p className="text-lg font-bold">
@@ -345,13 +379,25 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : (
+            // KARTU TAMPIL JIKA BELUM ADA BUDGET TERSIMPAN ATAU DILUAR JANGKA WAKTU
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] mb-8">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Target className="w-12 h-12 mb-4 text-gray-400" />
-                <h3 className="text-xl font-bold mb-2">No Budget Limit Set</h3>
-                <p className="text-gray-600 mb-4 text-center">
-                  Set a daily budget limit to track your spending
-                </p>
+                <h3 className="text-xl font-bold mb-2">Budget Not Active</h3>
+                
+                {budgetLimit && (
+                    <p className="text-gray-600 mb-4 text-center">
+                        Budget yang tersimpan saat ini ({formatRupiah(budgetLimit.totalBudget)}) **tidak aktif** karena diluar periode yang ditentukan: 
+                        <br/>
+                        ({new Date(budgetLimit.startDate).toLocaleDateString('id-ID')} - {new Date(budgetLimit.endDate).toLocaleDateString('id-ID')}).
+                    </p>
+                )}
+                {!budgetLimit && (
+                    <p className="text-gray-600 mb-4 text-center">
+                        Belum ada batas budget yang ditetapkan. Tentukan batas budget Anda di bawah ini.
+                    </p>
+                )}
+                
                 <Dialog open={isBudgetOpen} onOpenChange={setIsBudgetOpen}>
                   <DialogTrigger asChild>
                     <Button className="bg-black text-white hover:bg-gray-800 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
@@ -363,19 +409,19 @@ export default function DashboardPage() {
                     <DialogHeader>
                       <DialogTitle className="text-2xl font-bold">Set Budget Limit</DialogTitle>
                       <DialogDescription>
-                          Set your daily spending limit and the duration for tracking. Total budget will be calculated automatically.
+                          Set your total budget and the duration. Your daily limit will be calculated automatically.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <Label>Daily Limit (per hari)</Label>
+                        <Label>Total Budget (untuk seluruh periode)</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
                           <Input
                             type="text" 
-                            placeholder="150.000"
-                            value={formatRupiah(estimatedDailyLimit).replace('Rp', '').trim()} 
-                            onChange={handleDailyLimitChange}
+                            placeholder="3.000.000"
+                            value={formatRupiah(estimatedTotalBudget).replace('Rp', '').trim()} 
+                            onChange={handleTotalBudgetChange}
                             className="border-2 border-black pl-8 text-right"
                           />
                         </div>
@@ -406,12 +452,12 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       
-                      {daysCountEstimate > 0 && estimatedDailyLimit > 0 && (
+                      {daysCountEstimate > 0 && estimatedTotalBudget > 0 && (
                         <div className="p-3 border-2 border-dashed border-gray-300 rounded-md bg-gray-50 text-sm">
-                          <p className="font-semibold">Estimasi Total Budget:</p>
+                          <p className="font-semibold">Estimasi Daily Limit:</p>
                           <p className="text-lg font-bold text-black">
-                            {formatRupiah(estimatedTotalBudget)} 
-                            <span className="font-normal text-gray-500 text-sm"> ({daysCountEstimate} hari)</span>
+                            {formatRupiah(estimatedDailyLimit)} 
+                            <span className="font-normal text-gray-500 text-sm"> / hari ({daysCountEstimate} hari)</span>
                           </p>
                         </div>
                       )}
@@ -431,7 +477,7 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* ... Kartu Recent Transactions ... */}
+            {/* Kartu Recent Transactions */}
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Recent Transactions</CardTitle>
@@ -480,7 +526,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* ... Kartu Savings Goals ... */}
+            {/* Kartu Savings Goals */}
             <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Savings Goals</CardTitle>

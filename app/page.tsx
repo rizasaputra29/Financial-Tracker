@@ -91,12 +91,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-
-          <div className="mt-16 text-center">
-            <p className="text-sm text-gray-500">
-              Progressive Web App - Install on your device for offline access
-            </p>
-          </div>
         </div>
       </div>
     </main>

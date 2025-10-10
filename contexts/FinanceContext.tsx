@@ -44,12 +44,13 @@ interface FinanceContextType {
   updateTransaction: (id: string, updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   setBudgetLimit: (budget: Omit<BudgetLimit, 'id' | 'userId'>) => Promise<void>;
+  // BARU: Fungsi untuk mereset budget
+  resetBudgetLimit: () => Promise<void>; 
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'userId'>) => Promise<void>;
   updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => Promise<void>;
   deleteSavingsGoal: (id: string) => Promise<void>;
   getDailyExpenses: (date: string) => number;
   getRemainingDailyBudget: (date: string) => number;
-  // BARU: Fungsi untuk budget dinamis
   getPeriodExpenses: (start: string, end: string) => number;
   getAdjustedRemainingTotalBudget: () => number;
   fetchFinanceData: () => Promise<void>;
@@ -92,7 +93,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [budgetLimit, setBudgetLimitState] = useState<BudgetLimit | null>(null);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
 
-  // FIX: Mengubah ini menjadi fungsi yang dideklarasikan secara eksplisit
   const fetchFinanceData = async () => {
     if (isAuthLoading || !user) return; 
     
@@ -158,7 +158,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [user, isAuthLoading]);
 
   // --- FUNGSI CRUD TRANSACTIONS ---
-
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) return;
 
@@ -246,6 +245,35 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
   
+  // FUNGSI BARU: Mereset Budget (menonaktifkan)
+  const resetBudgetLimit = async () => {
+    if (!user || !budgetLimit) return;
+    
+    // 1. Send an update to the server to set isActive=false
+    const payload = {
+        totalBudget: numberToCleanString(budgetLimit.totalBudget),
+        dailyLimit: numberToCleanString(budgetLimit.dailyLimit),
+        startDate: budgetLimit.startDate,
+        endDate: budgetLimit.endDate,
+        isActive: false, // Set to inactive
+    };
+
+    const response = await fetch('/api/budget', {
+        method: 'POST', 
+        headers: getHeaders(user.id), 
+        body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+        // 2. Clear the local state so the Dashboard shows the "Set Budget" screen
+        // Ini akan memicu UI untuk menampilkan pesan "Budget Not Active"
+        setBudgetLimitState(null);
+    } else {
+        throw new Error('Failed to reset budget limit.');
+    }
+  };
+
+
   // --- FUNGSI CRUD SAVINGS GOALS ---
 
   const addSavingsGoal = async (goal: Omit<SavingsGoal, 'id' | 'userId' | 'createdAt'>) => {
@@ -383,7 +411,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
 
-  // --- FUNGSI BARU UNTUK BUDGET DINAMIS ---
+  // --- FUNGSI UNTUK BUDGET DINAMIS ---
   
   const getPeriodExpenses = useCallback((start: string, end: string): number => {
     return transactions.reduce((sum, t) => {
@@ -394,14 +422,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }, 0);
   }, [transactions]);
   
-  // LOGIKA UTAMA: Menghitung sisa budget total berdasarkan pengeluaran aktual
   const getAdjustedRemainingTotalBudget = useCallback((): number => {
     if (!budgetLimit || !budgetLimit.isActive) return 0;
     
-    // Hitung total pengeluaran yang sudah terjadi dalam periode budget
     const totalExpensesInPeriod = getPeriodExpenses(budgetLimit.startDate, budgetLimit.endDate);
     
-    // Sisa Budget Total = Total Budget Awal - Total Pengeluaran Aktual dalam Periode
     const remaining = budgetLimit.totalBudget - totalExpensesInPeriod;
     
     return remaining; 
@@ -431,12 +456,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         updateTransaction,
         deleteTransaction,
         setBudgetLimit,
+        resetBudgetLimit, // BARU: Export fungsi reset
         addSavingsGoal,
         updateSavingsGoal,
         deleteSavingsGoal,
         getDailyExpenses,
         getRemainingDailyBudget,
-        // BARU: Export fungsi-fungsi budget dinamis
         getPeriodExpenses,
         getAdjustedRemainingTotalBudget, 
         fetchFinanceData,
