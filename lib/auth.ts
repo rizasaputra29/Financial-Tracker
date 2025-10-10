@@ -1,10 +1,11 @@
 // path: lib/auth.ts
 import { User, Prisma } from '@prisma/client'; 
-// BARU: Import library bcryptjs
+// Import library bcryptjs
 import * as bcrypt from 'bcryptjs'; 
 import type { PrismaClient } from '@prisma/client/edge';
 
-export type ClientUser = Omit<User, 'password' | 'createdAt' | 'updatedAt' | 'transactions' | 'budgetLimit' | 'savingsGoals'>;
+// PERBAIKAN: Menambahkan 'securityAnswer' ke daftar yang di-Omit (dihapus)
+export type ClientUser = Omit<User, 'password' | 'securityAnswer' | 'createdAt' | 'updatedAt' | 'transactions' | 'budgetLimit' | 'savingsGoals'>;
 
 // HASHING PASSWORD DENGAN BCRYPT
 const saltRounds = 10; // Nilai standar yang bagus untuk keamanan
