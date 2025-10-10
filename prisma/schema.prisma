@@ -15,6 +15,7 @@ model User {
   password    String         // Simpan HASHED PASSWORD di sini
   fullName    String
   avatarUrl   String?
+  securityAnswer String 
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

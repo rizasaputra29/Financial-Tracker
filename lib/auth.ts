@@ -1,13 +1,21 @@
 // path: lib/auth.ts
 import { User, Prisma } from '@prisma/client'; 
-// Import PrismaClientType agar bisa digunakan untuk casting di API routes
+// BARU: Import library bcryptjs
+import * as bcrypt from 'bcryptjs'; 
 import type { PrismaClient } from '@prisma/client/edge';
 
 export type ClientUser = Omit<User, 'password' | 'createdAt' | 'updatedAt' | 'transactions' | 'budgetLimit' | 'savingsGoals'>;
 
-// MOCK HASHING (GUNAKAN BCRYPT ASLI DI PRODUCTION!)
-export const hashPassword = async (password: string) => `hashed_${password}_secure`;
-export const comparePassword = async (password: string, hash: string) => hash.includes(password); 
+// HASHING PASSWORD DENGAN BCRYPT
+const saltRounds = 10; // Nilai standar yang bagus untuk keamanan
+export const hashPassword = async (password: string) => {
+    // Menggunakan bcrypt.hash untuk menghasilkan hash yang aman
+    return bcrypt.hash(password, saltRounds);
+};
+export const comparePassword = async (password: string, hash: string) => {
+    // Menggunakan bcrypt.compare untuk membandingkan password yang diinput dengan hash yang tersimpan
+    return bcrypt.compare(password, hash); 
+};
 
 // Helper untuk otentikasi API
 export function getUserIdFromRequest(request: Request): string | null {

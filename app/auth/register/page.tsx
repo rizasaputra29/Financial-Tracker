@@ -1,3 +1,4 @@
+// rizasaputra29/financial-tracker/Financial-Tracker-6ef0fa1fb6903e1bd873f45840a83116c489026f/app/auth/register/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -15,6 +16,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  // BARU: State untuk jawaban keamanan
+  const [securityAnswer, setSecurityAnswer] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
@@ -24,7 +27,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    const success = await register(email, password, fullName);
+    // Kirim securityAnswer ke fungsi register
+    const success = await register(email, password, fullName, securityAnswer);
 
     if (success) {
       toast({
@@ -93,6 +97,19 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                className="border-2 border-black"
+              />
+            </div>
+            {/* BARU: Input untuk Jawaban Keamanan */}
+            <div className="space-y-2">
+              <Label htmlFor="securityAnswer">Security Question: Mother's Maiden Name</Label>
+              <Input
+                id="securityAnswer"
+                type="text"
+                placeholder="e.g., Smith (must be remembered)"
+                value={securityAnswer}
+                onChange={(e) => setSecurityAnswer(e.target.value)}
+                required
                 className="border-2 border-black"
               />
             </div>

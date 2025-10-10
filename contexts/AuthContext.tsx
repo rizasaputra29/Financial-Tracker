@@ -1,4 +1,4 @@
-// rizasaputra29/financial-tracker/Financial-Tracker-15996308ee6cfd5d3abc50bd8eb71447eefc8019/contexts/AuthContext.tsx
+// rizasaputra29/financial-tracker/Financial-Tracker-6ef0fa1fb6903e1bd873f45840a83116c489026f/contexts/AuthContext.tsx
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -7,11 +7,13 @@ import { getClientUserSession, persistUserSession, clearUserSession, ClientUser 
 interface AuthContextType {
   user: ClientUser | null; 
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, fullName: string) => Promise<boolean>;
+  // PERUBAHAN: Tambahkan securityAnswer dan newPassword ke register
+  register: (email: string, password: string, fullName: string, securityAnswer: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<ClientUser>) => Promise<boolean>; 
-  forgotPassword: (email: string) => Promise<boolean>;
-  isLoading: boolean; // Disediakan untuk sinkronisasi di FinanceContext
+  // PERUBAHAN: Tambahkan newPassword ke forgotPassword
+  forgotPassword: (email: string, securityAnswer: string, newPassword: string) => Promise<boolean>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,15 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedUser) {
       setUser(storedUser);
     }
-    setIsLoading(false); // Sesi selesai dimuat, baik ada user maupun tidak.
+    setIsLoading(false); 
   }, []);
 
-  const register = async (email: string, password: string, fullName: string): Promise<boolean> => {
+  const register = async (email: string, password: string, fullName: string, securityAnswer: string): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify({ email, password, fullName, securityAnswer }), 
       });
 
       if (response.ok) {
@@ -79,12 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
 
     try {
-        // Menggunakan user.id yang dijamin ada
         const response = await fetch('/api/auth/profile', {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-User-Id': user.id, // Eksplisit menggunakan user.id
+                'X-User-Id': user.id,
             },
             body: JSON.stringify(data),
         });
@@ -102,12 +103,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const forgotPassword = async (email: string): Promise<boolean> => {
+  // PERUBAHAN: Implementasi forgotPassword dengan newPassword
+  const forgotPassword = async (email: string, securityAnswer: string, newPassword: string): Promise<boolean> => {
     try {
         const response = await fetch('/api/auth/profile', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email }),
+            // Kirim newPassword ke API
+            body: JSON.stringify({ email, securityAnswer, newPassword }), 
         });
         
         return response.ok;

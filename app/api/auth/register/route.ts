@@ -5,19 +5,21 @@ import { hashPassword, ClientUser } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName } = await request.json();
+    // PERUBAHAN: Terima securityAnswer
+    const { email, password, fullName, securityAnswer } = await request.json();
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !securityAnswer) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
-    // FIX CALLABILITY: Menggunakan destructuring yang sederhana
     const user = await prisma.user.findUnique({ where: { email } }); 
     if (user) {
       return NextResponse.json({ message: 'Email already exists' }, { status: 409 });
     }
 
     const hashedPassword = await hashPassword(password);
+    // BARU: Hash Jawaban Keamanan
+    const hashedSecurityAnswer = await hashPassword(securityAnswer); 
     const defaultAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=000&color=fff`;
 
     const newUser = await prisma.user.create({
@@ -26,6 +28,8 @@ export async function POST(request: Request) {
         password: hashedPassword,
         fullName,
         avatarUrl: defaultAvatarUrl,
+        // BARU: Simpan Jawaban Keamanan yang sudah di-hash
+        securityAnswer: hashedSecurityAnswer,
       },
       select: { id: true, email: true, fullName: true, avatarUrl: true }, 
     });
